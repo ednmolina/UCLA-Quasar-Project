@@ -2,6 +2,7 @@
 Stable Version of the MCMC
 
 From an image file the user will click on a part of the image and this scipt, using a Markov Chain Monte Carlo, will fit the flux (data values at the point) to a circular Gaussian
+This code is a support function for the scipt named "grabCoordinates_v2.py".
 
 """
 
