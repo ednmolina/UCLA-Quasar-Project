@@ -6,6 +6,7 @@ import cPickle as pickle
 from lenstronomy.Plots.output_plots import LensModelPlot
 import numpy as np
 import pandas as pd
+import lenstronomy.Plots.output_plots as out_plot
 
 def getPickledData(Path, LensName):
     pick_path = Path
@@ -26,12 +27,24 @@ def getPickledData(Path, LensName):
     kwargs_numerics = pickle.load(open("%s/kwargs_numerics_%s.pickle" %(pick_path, LensName), 'rb'))
     kwargs_model = pickle.load(open("%s/kwargs_model_%s.pickle" %(pick_path, LensName), 'rb'))
 
-    return lens_result, source_result, lens_light_result, ps_result, cosmo_result, chain_list, param_list, samples_mcmc, param_mcmc, dist_mcmc, kwargs_data, kwargs_psf, kwargs_numerics, kwargs_model
+    "Import the updates"
+    multi_band_list_out = pickle.load(open("%s/multi_band_list_out%s.pickle" %(pick_path, LensName), 'rb'))
+    kwargs_params_out = pickle.load(open("%s/kwargs_params_out%s.pickle" %(pick_path, LensName), 'rb'))
+    kwargs_psf_out = pickle.load(open("%s/kwargs_psf_out%s.pickle" %(pick_path, LensName), 'rb'))
+
+
+
+    return lens_result, source_result, lens_light_result, ps_result, cosmo_result, chain_list, param_list, samples_mcmc, param_mcmc, dist_mcmc, kwargs_data, kwargs_psf, kwargs_numerics, kwargs_model, multi_band_list_out, kwargs_params_out, kwargs_psf_out
+
+def plotPSF_Iteration(kwargs_psf_out, Path, LensName):
+    f, axes = out_plot.psf_iteration_compare(kwargs_psf_out, vmin=-6)
+    f.savefig("%s/%sPSF_Iteration.pdf" % (Path, LensName))
+
 
 def getPlots(Path, LensName):
     "Get the pickled data"
 
-    lens_result, source_result, lens_light_result, ps_result, cosmo_result, chain_list, param_list, samples_mcmc, param_mcmc, dist_mcmc, kwargs_data, kwargs_psf, kwargs_numerics, kwargs_model = getPickledData(Path, LensName)
+    lens_result, source_result, lens_light_result, ps_result, cosmo_result, chain_list, param_list, samples_mcmc, param_mcmc, dist_mcmc, kwargs_data, kwargs_psf, kwargs_numerics, kwargs_model, multi_band_list_out, kwargs_params_out, kwargs_psf_out = getPickledData(Path, LensName)
     "Plotting the Data"
     lensPlot = LensModelPlot(kwargs_data, kwargs_psf, kwargs_numerics, kwargs_model, lens_result, source_result,
                              lens_light_result, ps_result, arrow_size=0.02, cmap_string="gist_heat", high_res=5)
@@ -89,6 +102,25 @@ def getPlots(Path, LensName):
     #plt.hist(data1d, bins=np.linspace(-.2, 0.2, 100))
     #plt.show()
     print "\n"
+
+    "Plot the PSF Iteration"
+    plotPSF_Iteration(kwargs_psf_out, Path, LensName)
+
+    "Plot the data and its comonents"
+    f, axes = plt.subplots(2, 3, figsize=(16, 8), sharex=False, sharey=False)
+
+    lensPlot.subtract_from_data_plot(ax=axes[0, 0], text='Data')
+    lensPlot.subtract_from_data_plot(ax=axes[0, 1], text='Data - Point Source', point_source_add=True)
+    lensPlot.subtract_from_data_plot(ax=axes[0, 2], text='Data - Lens Light', lens_light_add=True)
+    lensPlot.subtract_from_data_plot(ax=axes[1, 0], text='Data - Source Light', source_add=True)
+    lensPlot.subtract_from_data_plot(ax=axes[1, 1], text='Data - Source Light - Point Source', source_add=True,
+                                     point_source_add=True)
+    lensPlot.subtract_from_data_plot(ax=axes[1, 2], text='Data - Lens Light - Point Source', lens_light_add=True,
+                                     point_source_add=True)
+    f.tight_layout()
+    f.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0., hspace=0.05)
+    f.savefig("%s/%sDataComponents.pdf" % (Path, LensName))
+
 config_file = pd.read_excel("/Users/edenmolina/PycharmProjects/Quasar/Lenstronomy/LenstronomyConfig.xlsx", sheetname="Master")
 Names = config_file['Name']
 Paths = config_file['Path']
