@@ -10,44 +10,30 @@ import lenstronomy.Plots.output_plots as out_plot
 
 def getPickledData(Path, LensName):
     pick_path = Path
-    lens_result = pickle.load(open("%s/lens_result_%s.pickle" %(pick_path, LensName), 'rb'))
-    source_result = pickle.load(open("%s/source_result_%s.pickle" %(pick_path, LensName), 'rb'))
-    lens_light_result = pickle.load(open("%s/lens_light_result_%s.pickle" %(pick_path, LensName), 'rb'))
-    ps_result = pickle.load(open("%s/ps_result_%s.pickle"%(pick_path, LensName), 'rb'))
-    cosmo_result = pickle.load(open("%s/cosmo_result_%s.pickle" %(pick_path, LensName), 'rb'))
-    chain_list = pickle.load(open("%s/chain_list_%s.pickle" %(pick_path, LensName), 'rb'))
-    param_list = pickle.load(open("%s/param_list_%s.pickle" %(pick_path, LensName), 'rb'))
-    samples_mcmc = pickle.load(open("%s/samples_mcmc_%s.pickle" %(pick_path, LensName), 'rb'))
-    param_mcmc = pickle.load(open("%s/param_mcmc_%s.pickle" %(pick_path, LensName), 'rb'))
-    dist_mcmc = pickle.load(open("%s/dist_mcmc_%s.pickle" %(pick_path, LensName), 'rb'))
 
+    kwargs_data = pickle.load(open("%s/kwargs_data_%s.pickle" % (pick_path, LensName), 'rb'))
+    kwargs_psf_out = pickle.load(open("%s/kwargs_psf_out_%s.pickle" % (pick_path, LensName), 'rb'))
+    kwargs_numerics = pickle.load(open("%s/kwargs_numerics_%s.pickle" % (pick_path, LensName), 'rb'))
+    kwargs_model = pickle.load(open("%s/kwargs_model_%s.pickle" % (pick_path, LensName), 'rb'))
+    lens_result = pickle.load(open("%s/lens_result_%s.pickle" % (pick_path, LensName), 'rb'))
+    source_result = pickle.load(open("%s/source_result_%s.pickle" % (pick_path, LensName), 'rb'))
+    lens_light_result = pickle.load(open("%s/lens_light_result_%s.pickle" % (pick_path, LensName), 'rb'))
+    ps_result = pickle.load(open("%s/ps_result_%s.pickle" % (pick_path, LensName), 'rb'))
+    param_list = pickle.load(open("%s/param_list_%s.pickle" % (pick_path, LensName), 'rb'))
+    chain_list = pickle.load(open("%s/chain_list_%s.pickle" % (pick_path, LensName), 'rb'))
 
-    kwargs_data = pickle.load(open("%s/kwargs_data_%s.pickle" %(pick_path, LensName), 'rb'))
-    kwargs_psf = pickle.load(open("%s/kwargs_psf_%s.pickle" %(pick_path, LensName), 'rb'))
-    kwargs_numerics = pickle.load(open("%s/kwargs_numerics_%s.pickle" %(pick_path, LensName), 'rb'))
-    kwargs_model = pickle.load(open("%s/kwargs_model_%s.pickle" %(pick_path, LensName), 'rb'))
-
-    "Import the updates"
-    multi_band_list_out = pickle.load(open("%s/multi_band_list_out%s.pickle" %(pick_path, LensName), 'rb'))
-    kwargs_params_out = pickle.load(open("%s/kwargs_params_out%s.pickle" %(pick_path, LensName), 'rb'))
-    kwargs_psf_out = pickle.load(open("%s/kwargs_psf_out%s.pickle" %(pick_path, LensName), 'rb'))
-
-
-
-    return lens_result, source_result, lens_light_result, ps_result, cosmo_result, chain_list, param_list, samples_mcmc, param_mcmc, dist_mcmc, kwargs_data, kwargs_psf, kwargs_numerics, kwargs_model, multi_band_list_out, kwargs_params_out, kwargs_psf_out
-
-def plotPSF_Iteration(kwargs_psf_out, Path, LensName):
-    f, axes = out_plot.psf_iteration_compare(kwargs_psf_out, vmin=-6)
-    f.savefig("%s/%sPSF_Iteration.pdf" % (Path, LensName))
+    return lens_result, source_result, lens_light_result, ps_result, chain_list, param_list, kwargs_data, kwargs_numerics, kwargs_model, kwargs_psf_out
 
 
 def getPlots(Path, LensName):
     "Get the pickled data"
 
-    lens_result, source_result, lens_light_result, ps_result, cosmo_result, chain_list, param_list, samples_mcmc, param_mcmc, dist_mcmc, kwargs_data, kwargs_psf, kwargs_numerics, kwargs_model, multi_band_list_out, kwargs_params_out, kwargs_psf_out = getPickledData(Path, LensName)
+    lens_result, source_result, lens_light_result, ps_result, chain_list, param_list, kwargs_data, kwargs_numerics, kwargs_model, kwargs_psf_out = getPickledData(
+        Path, LensName)
+
     "Plotting the Data"
-    lensPlot = LensModelPlot(kwargs_data, kwargs_psf, kwargs_numerics, kwargs_model, lens_result, source_result,
-                             lens_light_result, ps_result, arrow_size=0.02, cmap_string="gist_heat", high_res=5)
+    lensPlot = LensModelPlot(kwargs_data, kwargs_psf_out, kwargs_numerics, kwargs_model, lens_result, source_result,
+                             lens_light_result, ps_result, arrow_size=0.02, cmap_string="gist_heat")
 
     f, axes = plt.subplots(2, 3, figsize=(16, 8), sharex=False, sharey=False)
 
@@ -59,7 +45,7 @@ def getPlots(Path, LensName):
     lensPlot.magnification_plot(ax=axes[1, 2])
     f.tight_layout()
     f.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0., hspace=0.05)
-    plt.savefig("%s/%sPlot1.pdf" %(Path, LensName))
+    plt.savefig("%s/%s_Plot1.pdf" % (Path, LensName))
     #plt.show()
 
     f, axes = plt.subplots(2, 3, figsize=(16, 8), sharex=False, sharey=False)
@@ -74,7 +60,10 @@ def getPlots(Path, LensName):
                                 point_source_add=True)
     f.tight_layout()
     f.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0., hspace=0.05)
-    plt.savefig("%s/%sPlot2.pdf" %(Path, LensName))
+    #plt.show()
+    plt.savefig("%s/%s_Plot2.pdf" % (Path, LensName))
+
+
     #plt.show()
     print "This is the lens result", "\n", lens_result #To access a particular value must index the array lens_result[0]
     print "This is the source result", "\n", source_result
@@ -82,7 +71,8 @@ def getPlots(Path, LensName):
     print "This is the point source result", "\n", ps_result
 
     import lenstronomy.Plots.output_plots as out_plot
-    plt.close()
+
+    "Plot the trajectory of the particles"
     for i in range(len(chain_list)):
         if len(param_list[i]) > 0:
             f2, axes2 = out_plot.plot_chain(chain_list[i], param_list[i])
@@ -92,8 +82,9 @@ def getPlots(Path, LensName):
             plt.grid(which="minor", alpha=.5, axis='x', linestyle=":")
             plt.grid(which="major", alpha=.5, axis='y')
             plt.grid(which="minor", alpha=.5, axis='y', linestyle=":")
-        f2.savefig("%s/%sPlotParams.pdf" % (Path, LensName))
+        f2.savefig("%s/%s_Plot3_Params.pdf" % (Path, LensName))
 
+    "Calculating some Statistics"
     import lenstronomy.Util.util as util
     data = lensPlot._data[0:50, 0:50]
     print "Median", np.median(data)
@@ -104,7 +95,9 @@ def getPlots(Path, LensName):
     print "\n"
 
     "Plot the PSF Iteration"
-    plotPSF_Iteration(kwargs_psf_out, Path, LensName)
+    f, axes = out_plot.psf_iteration_compare(kwargs_psf_out, vmin=-6)
+    f.savefig("%s/%s_Plot4_PSF_Iteration.pdf" % (Path, LensName))
+
 
     "Plot the data and its comonents"
     f, axes = plt.subplots(2, 3, figsize=(16, 8), sharex=False, sharey=False)
@@ -119,7 +112,7 @@ def getPlots(Path, LensName):
                                      point_source_add=True)
     f.tight_layout()
     f.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0., hspace=0.05)
-    f.savefig("%s/%sDataComponents.pdf" % (Path, LensName))
+    f.savefig("%s/%s_Plot5_DataComponents.pdf" % (Path, LensName))
 
 config_file = pd.read_excel("/Users/edenmolina/PycharmProjects/Quasar/Lenstronomy/LenstronomyConfig.xlsx", sheetname="Master")
 Names = config_file['Name']
