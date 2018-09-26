@@ -25,6 +25,7 @@ import lenstronomy.Util.image_util as im_util
 import pickle
 import pandas as pd
 import ast
+import lenstronomy.Plots.output_plots as out_plot
 
 def replaceValuesRADEC(dict, ra_lens, dec_lens):
     for i in dict.values():
@@ -34,7 +35,7 @@ def replaceValuesRADEC(dict, ra_lens, dec_lens):
             dict['center_y'] = dec_lens
 
     return dict
-    
+
 def getSquareCutout(source_cood, image, crop_factor):
     x, y = source_cood[0], source_cood[1]
     crop_factor = crop_factor
@@ -119,13 +120,15 @@ def getPSF(data_class, deltaPix, kwargs_data, x_quasar, y_quasar, lens_cropped, 
     kernel_point_source /= np.sum(kernel_point_source)
 
     psf_error_map = np.ones_like(kernel_point_source) * 0.1
-    kwargs_psf = {'psf_type': 'PIXEL', 'kernel_point_source': kernel_point_source, 'psf_error_map': psf_error_map}
+    kwargs_psf = {'psf_type': 'PIXEL', 'kernel_point_source': kernel_point_source,
+                  'kernel_point_source_init': kernel_point_source,
+                  'psf_error_map': psf_error_map}
 
     "For plotting the PSF"
-    #plt.imshow(np.log10(kernel_point_source), origin = 'lower')
-    #plt.title("Lensed Quasar PSF")
-    #plt.show()
-    #plt.close()
+    plt.imshow(np.log10(kernel_point_source), origin = 'lower')
+    plt.title("Lensed Quasar PSF")
+    plt.show()
+    plt.close()
     return kwargs_psf, ra_quasar, dec_quasar, ra_lens, dec_lens, theta_e_est
 
 def setParameters(theta_e_est, ra_lens, dec_lens, ra_quasar, dec_quasar, lens_params_dict, source_params_dict, lens_light_params_dict, ps_params_dict):
@@ -167,25 +170,21 @@ def setParameters(theta_e_est, ra_lens, dec_lens, ra_quasar, dec_quasar, lens_pa
     kwargs_upper_lens_light = [{'R_sersic': 10, 'n_sersic': 5., 'e1': 0.5, 'e2': 0.5, 'center_x': 10, 'center_y': 10}]
     kwargs_upper_ps = [{'ra_image': 10 * np.ones_like(ra_quasar), 'dec_image': 10 * np.ones_like(dec_quasar)}]
 
-    """
-    FIX PARAMETERS HERE
-    """
-    lens_params = [kwargs_lens_init, kwargs_lens_sigma, [lens_params_dict, {}], kwargs_lower_lens,
-                    kwargs_upper_lens]
-
-    source_params = [kwargs_source_init, kwargs_source_sigma, [source_params_dict], kwargs_lower_source,
-                     kwargs_upper_source]
-
-    lens_light_params = [kwargs_lens_light_init, kwargs_lens_light_sigma, [lens_light_params_dict], kwargs_lower_lens_light,
+    "Can fix certain parameters here"
+    lens_params = [kwargs_lens_init, kwargs_lens_sigma, [{'gamma': 2, 'e1': 0}, {}], kwargs_lower_lens,
+                   kwargs_upper_lens]
+    source_params = [kwargs_source_init, kwargs_source_sigma, [{}], kwargs_lower_source, kwargs_upper_source]
+    lens_light_params = [kwargs_lens_light_init, kwargs_lens_light_sigma, [{}], kwargs_lower_lens_light,
                          kwargs_upper_lens_light]
+    ps_params = [kwargs_ps_init, kwargs_ps_sigma, [{}], kwargs_lower_ps, kwargs_upper_ps]
 
-    ps_params = [kwargs_ps_init, kwargs_ps_sigma, [ps_params_dict], kwargs_lower_ps, kwargs_upper_ps]
-
+    # kwargs_init = [kwargs_lens, kwargs_source, kwargs_lens_light, kwargs_ps]
     kwargs_params = {'lens_model': lens_params,
                      'source_model': source_params,
                      'lens_light_model': lens_light_params,
                      'point_source_model': ps_params}
-    return kwargs_params
+
+    return kwargs_params, kwargs_lens_sigma, kwargs_lower_lens, kwargs_upper_lens, kwargs_source_sigma, kwargs_lower_source, kwargs_upper_source, kwargs_lens_light_sigma, kwargs_lower_lens_light, kwargs_upper_lens_light, kwargs_ps_sigma, kwargs_lower_ps, kwargs_upper_ps
 
 "Initialize Lenstronomy"
 def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasar, y_quasar, crop_factor, lens_org, lens_cropped, kernel_size, lens_params_dict, source_params_dict, lens_light_params_dict, ps_params_dict, n_iterations, n_particles, *mask_path):
@@ -198,7 +197,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    "Lens Model Parameters"
    lens_model_list = ['SIS', 'SHEAR']
    kwargs_shear = {'e1': 0.01, 'e2': 0.01}  # gamma_ext: shear strength, psi_ext: shear angel (in radian)
-   kwargs_sie = {'theta_E': theta_e_est, 'e1': .07, 'e2': .07, 'center_x': 0, 'center_y': 0}
+   kwargs_sie = {'theta_E': theta_e_est, 'center_x': 0, 'center_y': 0}
    kwargs_lens = [kwargs_sie, kwargs_shear]
    lens_model_class = LensModel(lens_model_list=lens_model_list)
 
@@ -213,10 +212,26 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
                    'fixed_magnification_list': [False],
                    }
 
-   kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False,
-                      'mask': np.ones_like(cropped_image),
-                      'psf_keep_error_map': True,
-                      'point_source_subgrid': 1}
+
+   "Checks to see if there is a mask"
+   if mask_path==(0,):
+        print "No Mask"
+        #kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False, 'mask': np.ones_like(cropped_image)}
+        kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False,
+                           'mask': np.ones_like(cropped_image),
+                           'psf_keep_error_map': True,
+                           'point_source_subgrid': 1}
+        multi_band_list = [[kwargs_data, kwargs_psf, kwargs_numerics]]
+   else:
+        print "Mask found"
+        hdulist = fits.open(str(mask_path[0]))
+        mask = hdulist[0].data
+        cropped_mask = getSquareCutout(lens_org, mask, int(crop_factor))
+        kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False,
+                           'mask': np.ones_like(cropped_mask),
+                           'psf_keep_error_map': True,
+                           'point_source_subgrid': 1}
+        multi_band_list = [[kwargs_data, kwargs_psf, kwargs_numerics]]
 
    num_source_model = len(source_model_list)
 
@@ -242,21 +257,8 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
 
    multi_band_list = [[kwargs_data, kwargs_psf, kwargs_numerics]]
 
-
-   "Checks to see if there is a mask"
-   if mask_path==(0,):
-        print "No Mask"
-        #kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False, 'mask': np.ones_like(cropped_image)}
-        kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False, 'mask': np.ones_like(cropped_image)}
-   else:
-        print "Mask found"
-        hdulist = fits.open(str(mask_path[0]))
-        mask = hdulist[0].data
-        cropped_mask = getSquareCutout(lens_org, mask, int(crop_factor))
-        kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False, 'mask': np.ones_like(cropped_mask)}
-
    "Initialization of parameters for parameter space"
-   kwargs_params = setParameters(theta_e_est, ra_lens, dec_lens, ra_quasar, dec_quasar, lens_params_dict, source_params_dict, lens_light_params_dict, ps_params_dict)
+   kwargs_params, kwargs_lens_sigma, kwargs_lower_lens, kwargs_upper_lens, kwargs_source_sigma, kwargs_lower_source, kwargs_upper_source, kwargs_lens_light_sigma, kwargs_lower_lens_light, kwargs_upper_lens_light, kwargs_ps_sigma, kwargs_lower_ps, kwargs_upper_ps = setParameters(theta_e_est, ra_lens, dec_lens, ra_quasar, dec_quasar, lens_params_dict, source_params_dict, lens_light_params_dict, ps_params_dict)
 
    "Initialize the PSO and MCMC Parameters"
    fitting_seq = FittingSequence(multi_band_list, kwargs_model, kwargs_constraints, kwargs_likelihood, kwargs_params)
@@ -276,6 +278,92 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    multi_band_list_out = fitting_seq.multi_band_list
    kwargs_params_out = fitting_seq.kwargs_params
    kwargs_data, kwargs_psf_out, kwargs_numerics = multi_band_list_out[0]
+
+
+   """ ******ADDING PLOTTING SEQUENCE HERE TO DEBUGG******"""
+   lens_params = [lens_result, kwargs_lens_sigma, [{'gamma': 2, 'e1': 0}, {}], kwargs_lower_lens, kwargs_upper_lens]
+   source_params = [source_result, kwargs_source_sigma, [{}], kwargs_lower_source, kwargs_upper_source]
+   lens_light_params = [lens_light_result, kwargs_lens_light_sigma, [{}], kwargs_lower_lens_light,
+                        kwargs_upper_lens_light]
+   ps_params = [ps_result, kwargs_ps_sigma, [{}], kwargs_lower_ps, kwargs_upper_ps]
+
+   # kwargs_init = [kwargs_lens, kwargs_source, kwargs_lens_light, kwargs_ps]
+   kwargs_params_out = {'lens_model': lens_params,
+                        'source_model': source_params,
+                        'lens_light_model': lens_light_params,
+                        'point_source_model': ps_params}
+
+   fitting_seq = FittingSequence(multi_band_list_out, kwargs_model, kwargs_constraints, kwargs_likelihood,
+                                 kwargs_params_out)
+
+   fitting_kwargs_list = [
+       {'fitting_routine': 'psf_iteration', 'psf_iter_num': 100, 'psf_iter_factor': 0.1}
+       # {'fitting_routine': 'MCMC', 'n_burn': 100, 'n_run': 100, 'walkerRatio': 10, 'mpi': False,'sigma_scale': .1}
+   ]
+
+   lens_result, source_result, lens_light_result, ps_result, cosmo_result, chain_list, param_list, samples_mcmc, param_mcmc, dist_mcmc = fitting_seq.fit_sequence(
+       fitting_kwargs_list)
+   multi_band_list_out = fitting_seq.multi_band_list
+   kwargs_params_out = fitting_seq.kwargs_params
+   kwargs_data, kwargs_psf_out, kwargs_numerics = multi_band_list_out[0]
+
+   from lenstronomy.Plots.output_plots import LensModelPlot
+
+   lensPlot = LensModelPlot(kwargs_data, kwargs_psf_out, kwargs_numerics, kwargs_model, lens_result, source_result,
+                            lens_light_result, ps_result, arrow_size=0.02, cmap_string="gist_heat")
+
+   f, axes = plt.subplots(2, 3, figsize=(16, 8), sharex=False, sharey=False)
+
+   lensPlot.data_plot(ax=axes[0, 0])
+   lensPlot.model_plot(ax=axes[0, 1])
+   lensPlot.normalized_residual_plot(ax=axes[0, 2], v_min=-6, v_max=6)
+   lensPlot.source_plot(ax=axes[1, 0], convolution=False, deltaPix_source=0.01, numPix=100)
+   lensPlot.convergence_plot(ax=axes[1, 1], v_max=1)
+   lensPlot.magnification_plot(ax=axes[1, 2])
+   f.tight_layout()
+   f.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0., hspace=0.05)
+   plt.show()
+
+   f, axes = plt.subplots(2, 3, figsize=(16, 8), sharex=False, sharey=False)
+
+   lensPlot.decomposition_plot(ax=axes[0, 0], text='Lens light', lens_light_add=True, unconvolved=True)
+   lensPlot.decomposition_plot(ax=axes[1, 0], text='Lens light convolved', lens_light_add=True)
+   lensPlot.decomposition_plot(ax=axes[0, 1], text='Source light', source_add=True, unconvolved=True)
+   lensPlot.decomposition_plot(ax=axes[1, 1], text='Source light convolved', source_add=True)
+   lensPlot.decomposition_plot(ax=axes[0, 2], text='All components', source_add=True, lens_light_add=True,
+                               unconvolved=True)
+   lensPlot.decomposition_plot(ax=axes[1, 2], text='All components convolved', source_add=True, lens_light_add=True,
+                               point_source_add=True)
+   f.tight_layout()
+   f.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0., hspace=0.05)
+   plt.show()
+   print lens_result, source_result, lens_light_result, ps_result
+
+   import lenstronomy.Plots.output_plots as out_plot
+
+   for i in range(len(chain_list)):
+       if len(param_list[i]) > 0:
+           f, axes = out_plot.plot_chain(chain_list[i], param_list[i])
+
+   print "Plotting the PSF Iteration"
+   f, axes = out_plot.psf_iteration_compare(kwargs_psf_out, vmin=-6)
+   plt.title("PSF ITERR")
+   f.show()
+
+   f, axes = plt.subplots(2, 3, figsize=(16, 8), sharex=False, sharey=False)
+
+   lensPlot.subtract_from_data_plot(ax=axes[0, 0], text='Data')
+   lensPlot.subtract_from_data_plot(ax=axes[0, 1], text='Data - Point Source', point_source_add=True)
+   lensPlot.subtract_from_data_plot(ax=axes[0, 2], text='Data - Lens Light', lens_light_add=True)
+   lensPlot.subtract_from_data_plot(ax=axes[1, 0], text='Data - Source Light', source_add=True)
+   lensPlot.subtract_from_data_plot(ax=axes[1, 1], text='Data - Source Light - Point Source', source_add=True,
+                                    point_source_add=True)
+   lensPlot.subtract_from_data_plot(ax=axes[1, 2], text='Data - Lens Light - Point Source', lens_light_add=True,
+                                    point_source_add=True)
+   f.tight_layout()
+   f.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0., hspace=0.05)
+   plt.show()
+   """ ******END OF PLOT******"""
 
    "Saving the outputs"
    pick_path = "/Users/edenmolina/PycharmProjects/Quasar/Lenstronomy"
@@ -298,7 +386,6 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    pickle.dump(multi_band_list_out, open("%s/multi_band_list_out_%s.pickle" % (pick_path, LensName), 'wb'))
    pickle.dump(kwargs_params_out, open("%s/kwargs_params_out_%s.pickle" % (pick_path, LensName), 'wb'))
    pickle.dump(kwargs_psf_out, open("%s/kwargs_psf_out_%s.pickle" % (pick_path, LensName), 'wb'))
-
 
 
 "IMPORT THE CONFIGURATION FILE AND INITIALIZE THE PARAMETERS FOR THE MODELING"
