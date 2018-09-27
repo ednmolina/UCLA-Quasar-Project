@@ -73,24 +73,26 @@ def getPlots(Path, LensName):
     import lenstronomy.Plots.output_plots as out_plot
 
     "Plot the trajectory of the particles"
+    print "PLOTTING THE TRAJECTORY"
+    #print "THIS IS THE CHAIN LIST"
+    #print chain_list
+
+
     for i in range(len(chain_list)):
-        if len(param_list[i]) > 0:
-            f2, axes2 = out_plot.plot_chain(chain_list[i], param_list[i])
-            plt.minorticks_on()
-            plt.minorticks_on()
-            plt.grid(which="major", alpha=.5, axis='x')
-            plt.grid(which="minor", alpha=.5, axis='x', linestyle=":")
-            plt.grid(which="major", alpha=.5, axis='y')
-            plt.grid(which="minor", alpha=.5, axis='y', linestyle=":")
-        f2.savefig("%s/%s_Plot3_Params.pdf" % (Path, LensName))
+        if len(param_list[i]) != 0:
+            f, axes = out_plot.plot_chain(chain_list[i], param_list[i])
+        f.show()
+        f.savefig("%s/%s_Plot3_Params.pdf" % (Path, LensName))
 
     "Calculating some Statistics"
     import lenstronomy.Util.util as util
     data = lensPlot._data[0:50, 0:50]
+    #data = lensPlot._data
     print "Median", np.median(data)
     print "Width", np.std(data)
     data1d = util.image2array(data)
-    #plt.hist(data1d, bins=np.linspace(-.2, 0.2, 100))
+    plt.hist(data1d, bins=np.linspace(-.2, 0.2, 100))
+    #plt.savefig("%s/%s_Plot6_Hitsogram.pdf" % (Path, LensName))
     #plt.show()
     print "\n"
 

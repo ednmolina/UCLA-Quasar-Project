@@ -262,27 +262,31 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    "Initialization of parameters for parameter space"
    kwargs_params, kwargs_lens_sigma, kwargs_lower_lens, kwargs_upper_lens, kwargs_source_sigma, kwargs_lower_source, kwargs_upper_source, kwargs_lens_light_sigma, kwargs_lower_lens_light, kwargs_upper_lens_light, kwargs_ps_sigma, kwargs_lower_ps, kwargs_upper_ps = setParameters(theta_e_est, ra_lens, dec_lens, ra_quasar, dec_quasar, lens_params_dict, source_params_dict, lens_light_params_dict, ps_params_dict)
 
-   "Initialize the PSO and MCMC Parameters"
+   """
+            ******Initialize the PSO and MCMC Parameters******
+   """
+   "First fitting sequence"
    fitting_seq = FittingSequence(multi_band_list, kwargs_model, kwargs_constraints, kwargs_likelihood, kwargs_params)
 
    fitting_kwargs_list = [
-       {'fitting_routine': 'PSO', 'mpi': False, 'sigma_scale': 1., 'n_particles': n_particles,
-        'n_iterations': n_iterations},
+       {'fitting_routine': 'PSO', 'mpi': False, 'sigma_scale': 1., 'n_particles': 20,
+        'n_iterations': 20},
        {'fitting_routine': 'psf_iteration', 'psf_iter_num': 10, 'psf_iter_factor': 0.2},
        # {'fitting_routine': 'MCMC', 'n_burn': 100, 'n_run': 100, 'walkerRatio': 10, 'mpi': False,'sigma_scale': .1}
    ]
 
-   """
-   ******      OUTPUTS OF THE LENS MODELING      ******
-   """
    lens_result, source_result, lens_light_result, ps_result, cosmo_result, chain_list, param_list, samples_mcmc, param_mcmc, dist_mcmc = fitting_seq.fit_sequence(
        fitting_kwargs_list)
    multi_band_list_out = fitting_seq.multi_band_list
    kwargs_params_out = fitting_seq.kwargs_params
    kwargs_data, kwargs_psf_out, kwargs_numerics = multi_band_list_out[0]
 
+   print "Saving the Chainlist"
+   pick_path = "/Users/edenmolina/PycharmProjects/Quasar/Lenstronomy"
+   pickle.dump(chain_list, open("%s/chain_list_%s.pickle" % (pick_path, LensName), 'wb'))
+   pickle.dump(param_list, open("%s/param_list_%s.pickle" % (pick_path, LensName), 'wb'))
 
-   """ ******ADDING PLOTTING SEQUENCE HERE TO DEBUGG******"""
+   "Second Fitting Sequence"
    lens_params = [lens_result, kwargs_lens_sigma, [{'gamma': 2, 'e1': 0}, {}], kwargs_lower_lens, kwargs_upper_lens]
    source_params = [source_result, kwargs_source_sigma, [{}], kwargs_lower_source, kwargs_upper_source]
    lens_light_params = [lens_light_result, kwargs_lens_light_sigma, [{}], kwargs_lower_lens_light,
@@ -309,6 +313,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    multi_band_list_out = fitting_seq.multi_band_list
    kwargs_params_out = fitting_seq.kwargs_params
    kwargs_data, kwargs_psf_out, kwargs_numerics = multi_band_list_out[0]
+
 
    # from lenstronomy.Plots.output_plots import LensModelPlot
    #
@@ -369,7 +374,6 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    """ ******END OF PLOT******"""
 
    "Saving the outputs"
-   pick_path = "/Users/edenmolina/PycharmProjects/Quasar/Lenstronomy"
 
    pickle.dump(kwargs_data, open("%s/kwargs_data_%s.pickle" % (pick_path, LensName), 'wb'))
    pickle.dump(kwargs_psf_out, open("%s/kwargs_psf_out_%s.pickle" % (pick_path, LensName), 'wb'))
@@ -379,8 +383,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    pickle.dump(source_result, open("%s/source_result_%s.pickle" % (pick_path, LensName), 'wb'))
    pickle.dump(lens_light_result, open("%s/lens_light_result_%s.pickle" % (pick_path, LensName), 'wb'))
    pickle.dump(ps_result, open("%s/ps_result_%s.pickle" % (pick_path, LensName), 'wb'))
-   pickle.dump(param_list, open("%s/param_list_%s.pickle" % (pick_path, LensName), 'wb'))
-   pickle.dump(chain_list, open("%s/chain_list_%s.pickle" % (pick_path, LensName), 'wb'))
+
 
 
 
