@@ -98,7 +98,7 @@ def getImage(file_path, exp_time, bkg_rms, bkg_mean, crop_factor, lens_org):
     data_class = Data(kwargs_data)
     return data_class, deltaPix, kwargs_data, cropped_image
 
-def getPSF(data_class, deltaPix, kwargs_data, x_quasar, y_quasar, lens_cropped, kernel_size, Path, LensName):
+def getPSF(data_class, deltaPix, kwargs_data, x_quasar, y_quasar, lens_cropped, kernel_size, Path, LensName, PSF_Choice):
     x_quasar = x_quasar
     y_quasar = y_quasar
 
@@ -115,7 +115,7 @@ def getPSF(data_class, deltaPix, kwargs_data, x_quasar, y_quasar, lens_cropped, 
     # kernel_point_source = kernel_util.cutout_source(x_quasar[0], y_quasar[0], kwargs_data['image_data'],
     #                                                 kernelsize=kernel_size, shift=True)
     # kernel_point_source = rotate_stack_PSF(kernel_point_source)
-    kernel_point_source = kernel_util.cutout_source(x_quasar[1], y_quasar[1], kwargs_data['image_data'],
+    kernel_point_source = kernel_util.cutout_source(x_quasar[PSF_Choice], y_quasar[PSF_Choice], kwargs_data['image_data'],
                                                     kernelsize=kernel_size, shift=True)
     kernel_point_source /= np.sum(kernel_point_source)
 
@@ -188,13 +188,13 @@ def setParameters(theta_e_est, ra_lens, dec_lens, ra_quasar, dec_quasar, lens_pa
     return kwargs_params, kwargs_lens_sigma, kwargs_lower_lens, kwargs_upper_lens, kwargs_source_sigma, kwargs_lower_source, kwargs_upper_source, kwargs_lens_light_sigma, kwargs_lower_lens_light, kwargs_upper_lens_light, kwargs_ps_sigma, kwargs_lower_ps, kwargs_upper_ps
 
 "Initialize Lenstronomy"
-def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasar, y_quasar, crop_factor, lens_org, lens_cropped, kernel_size, lens_params_dict, source_params_dict, lens_light_params_dict, ps_params_dict, n_iterations, n_particles, *mask_path):
+def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasar, y_quasar, crop_factor, lens_org, lens_cropped, kernel_size, lens_params_dict, source_params_dict, lens_light_params_dict, ps_params_dict, n_iterations, n_particles, PSF_Choice, *mask_path):
    "Importing the image file"
    data_class, deltaPix, kwargs_data, cropped_image = getImage(file_path, exp_time, bkg_rms, bkg_mean, crop_factor, lens_org)
    Path = "/Users/edenmolina/PycharmProjects/Quasar/Lenstronomy"
 
    "Getting the PSF of a lensed Quasar"
-   kwargs_psf, ra_quasar, dec_quasar, ra_lens, dec_lens, theta_e_est = getPSF(data_class, deltaPix, kwargs_data, x_quasar, y_quasar, lens_cropped, kernel_size, Path, LensName)
+   kwargs_psf, ra_quasar, dec_quasar, ra_lens, dec_lens, theta_e_est = getPSF(data_class, deltaPix, kwargs_data, x_quasar, y_quasar, lens_cropped, kernel_size, Path, LensName, PSF_Choice)
 
    "Lens Model Parameters"
    lens_model_list = ['SIS', 'SHEAR']
@@ -269,8 +269,8 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    fitting_seq = FittingSequence(multi_band_list, kwargs_model, kwargs_constraints, kwargs_likelihood, kwargs_params)
 
    fitting_kwargs_list = [
-       {'fitting_routine': 'PSO', 'mpi': False, 'sigma_scale': 1., 'n_particles': 20,
-        'n_iterations': 20},
+       {'fitting_routine': 'PSO', 'mpi': False, 'sigma_scale': 1., 'n_particles': n_particles,
+        'n_iterations': n_iterations},
        {'fitting_routine': 'psf_iteration', 'psf_iter_num': 10, 'psf_iter_factor': 0.2},
        # {'fitting_routine': 'MCMC', 'n_burn': 100, 'n_run': 100, 'walkerRatio': 10, 'mpi': False,'sigma_scale': .1}
    ]
@@ -413,6 +413,7 @@ lens_light_params_dict = config_file['lens_light_params_dict'].values
 ps_params_dict = config_file['ps_params_dict'].values
 n_iterations = config_file['n_iterations']
 n_particles = config_file['n_particles']
+PSF_Choice = config_file['PSF_Choice']
 Mask = config_file['Mask']
 RunBool = config_file['RunBool']
 
@@ -423,6 +424,6 @@ for i in range(len(Names)):
         lenstronomy_master(Names[i], Paths[i], ExpTime[i], BKG_RMS[i], BKG_MEAN[i], [Quasar1_x[i], Quasar2_x[i]],
                            [Quasar1_y[i], Quasar2_y[i]], Crop_Factor[i], [LensXOrg[i], LensYOrg[i]],
                            [LensXCrop[i], LensYCrop[i]], kernel_size[i],ast.literal_eval(lens_params_dict[i]), ast.literal_eval(source_params_dict[i]),
-                           ast.literal_eval(lens_light_params_dict[i]), ast.literal_eval(ps_params_dict[i]), n_iterations[i], n_particles[i], Mask[i])
+                           ast.literal_eval(lens_light_params_dict[i]), ast.literal_eval(ps_params_dict[i]), n_iterations[i], n_particles[i], PSF_Choice[i], Mask[i])
     else:
         print "Skipping %s" %Names[i], "\n"
