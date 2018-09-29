@@ -14,7 +14,7 @@ from lenstronomy.PointSource.point_source import PointSource
 from lenstronomy.LensModel.lens_model import LensModel
 from lenstronomy.LensModel.Solver.lens_equation_solver import LensEquationSolver
 from lenstronomy.LightModel.light_model import LightModel
-from lenstronomy.Workflow.parameters import Param
+#from lenstronomy.Workflow.parameters import Param
 import lenstronomy.Util.util as util
 import astropy.io.fits as fits
 import seaborn as sns
@@ -118,10 +118,16 @@ def getPSF(data_class, deltaPix, kwargs_data, x_quasar, y_quasar, lens_cropped, 
     kernel_point_source = kernel_util.cutout_source(x_quasar[PSF_Choice], y_quasar[PSF_Choice], kwargs_data['image_data'],
                                                     kernelsize=kernel_size, shift=True)
     kernel_point_source /= np.sum(kernel_point_source)
+    num_large = 221
+    kernel_point_source_new = np.zeros((num_large, num_large))
+    num_small = len(kernel_point_source)
+    x_min = (num_large - num_small) / 2
+    x_max = x_min + num_small
+    kernel_point_source_new[x_min:x_max, x_min:x_max] = kernel_point_source
 
-    psf_error_map = np.ones_like(kernel_point_source) * 0.1
-    kwargs_psf = {'psf_type': 'PIXEL', 'kernel_point_source': kernel_point_source,
-                  'kernel_point_source_init': kernel_point_source,
+    psf_error_map = np.ones_like(kernel_point_source_new) * 0 # 0.1
+    kwargs_psf = {'psf_type': 'PIXEL', 'kernel_point_source': kernel_point_source_new,
+                  'kernel_point_source_init': kernel_point_source_new,
                   'psf_error_map': psf_error_map}
 
     "For plotting the PSF"
@@ -142,9 +148,9 @@ def setParameters(theta_e_est, ra_lens, dec_lens, ra_quasar, dec_quasar, lens_pa
         {'theta_E': theta_e_est, 'e1': 0., 'e2': 0., 'gamma': 2., 'center_x': ra_lens, 'center_y': dec_lens},
         {'e1': 0., 'e2': 0.}]
     kwargs_source_init = [
-        {'R_sersic': 0.03, 'n_sersic': 1., 'e1': 0.2, 'e2': 0.2, 'center_x': ra_lens, 'center_y': dec_lens}]
+        {'R_sersic': 0.03, 'n_sersic': 1., 'e1': 0.2, 'e2': 0, 'center_x': ra_lens, 'center_y': dec_lens}]
     kwargs_lens_light_init = [
-        {'R_sersic': 0.1, 'n_sersic': 1., 'e1': 0., 'e2': 0., 'center_x': ra_lens, 'center_y': dec_lens}]
+        {'R_sersic': 0.5, 'n_sersic': 1., 'e1': 0., 'e2': 0., 'center_x': ra_lens, 'center_y': dec_lens}]
     kwargs_ps_init = [{'ra_image': ra_quasar, 'dec_image': dec_quasar}]
 
     # initial spread in parameter estimation #
@@ -152,7 +158,7 @@ def setParameters(theta_e_est, ra_lens, dec_lens, ra_quasar, dec_quasar, lens_pa
                          {'e1': 0.1, 'e2': 0.1}]
     kwargs_source_sigma = [{'R_sersic': 0.2, 'n_sersic': .5, 'center_x': .1, 'center_y': 0.2, 'e1': 0.2, 'e2': 0.2}]
     kwargs_lens_light_sigma = [
-        {'R_sersic': 0.1, 'n_sersic': 0.5, 'e1': 0.2, 'e2': 0.2, 'center_x': .1, 'center_y': 0.1}]
+        {'R_sersic': 0.4, 'n_sersic': 0.5, 'e1': 0.2, 'e2': 0.2, 'center_x': .1, 'center_y': 0.1}]
     kwargs_ps_sigma = [{'ra_image': [0.02] * 2, 'dec_image': [0.02] * 2}]
 
     # hard bound lower limit in parameter space #
@@ -204,7 +210,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    lens_model_class = LensModel(lens_model_list=lens_model_list)
 
    source_model_list = []
-   lens_light_model_list = ['SERSIC_ELLIPSE']
+   lens_light_model_list = ['SERSIC_ELLIPSE']  # , SERSIC_ELLIPSE]
    point_source_list = ['LENSED_POSITION']
 
    kwargs_model = {'lens_model_list': lens_model_list,
@@ -230,7 +236,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
         mask = hdulist[0].data
         cropped_mask = getSquareCutout(lens_org, mask, int(crop_factor))
         kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False,
-                           'mask': np.ones_like(cropped_mask),
+                           'mask': cropped_mask,
                            'psf_keep_error_map': True,
                            'point_source_subgrid': 1}
         multi_band_list = [[kwargs_data, kwargs_psf, kwargs_numerics]]
@@ -241,9 +247,10 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
        'num_point_source_list': [2],
        'additional_images_list': [False],
        'joint_lens_with_light': [[0, 0, ['center_x', 'center_y']]],
-       'joint_source_with_point_source': [],  # [[0, 0, ['center_x', 'center_y']]],
+       'joint_source_with_point_source': [],  # [[0, 0]],
        # 'fix_to_point_source_list': [True] * num_source_model,
        'image_plane_source_list': [False] * num_source_model,
+       #'joint_lens_light_with_lens_light': [[0, 1, ['center_x', 'center_y']]]
        'solver': True,
        'solver_type': 'THETA_E_PHI',  # 'PROFILE', 'PROFILE_SHEAR', 'ELLIPSE', 'CENTER'
    }
@@ -271,7 +278,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    fitting_kwargs_list = [
        {'fitting_routine': 'PSO', 'mpi': False, 'sigma_scale': 1., 'n_particles': n_particles,
         'n_iterations': n_iterations},
-       {'fitting_routine': 'psf_iteration', 'psf_iter_num': 10, 'psf_iter_factor': 0.2},
+       {'fitting_routine': 'psf_iteration', 'psf_iter_num': 200, 'psf_iter_factor': 0.5, 'kwargs_psf_iter': {'stacking_option': 'mean'}},
        # {'fitting_routine': 'MCMC', 'n_burn': 100, 'n_run': 100, 'walkerRatio': 10, 'mpi': False,'sigma_scale': .1}
    ]
 
@@ -384,7 +391,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    pickle.dump(lens_light_result, open("%s/lens_light_result_%s.pickle" % (pick_path, LensName), 'wb'))
    pickle.dump(ps_result, open("%s/ps_result_%s.pickle" % (pick_path, LensName), 'wb'))
 
-
+   print "Finished!"
 
 
 "IMPORT THE CONFIGURATION FILE AND INITIALIZE THE PARAMETERS FOR THE MODELING"
