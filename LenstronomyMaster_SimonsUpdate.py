@@ -230,6 +230,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    lens_model_class = LensModel(lens_model_list=lens_model_list)
 
    #source_model_list = ['SERSIC']
+   "Model a soource if it is seen"
    if SourceVisible == 0:
         source_model_list = []
    else:
