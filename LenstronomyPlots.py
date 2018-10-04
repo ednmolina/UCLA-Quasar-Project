@@ -24,10 +24,8 @@ def getPickledData(Path, LensName):
 
     return lens_result, source_result, lens_light_result, ps_result, chain_list, param_list, kwargs_data, kwargs_numerics, kwargs_model, kwargs_psf_out
 
-
 def getPlots(Path, LensName):
     "Get the pickled data"
-
     lens_result, source_result, lens_light_result, ps_result, chain_list, param_list, kwargs_data, kwargs_numerics, kwargs_model, kwargs_psf_out = getPickledData(
         Path, LensName)
 
@@ -77,7 +75,6 @@ def getPlots(Path, LensName):
     #print "THIS IS THE CHAIN LIST"
     #print chain_list
 
-
     for i in range(len(chain_list)):
         if len(param_list[i]) != 0:
             f, axes = out_plot.plot_chain(chain_list[i], param_list[i])
@@ -99,7 +96,6 @@ def getPlots(Path, LensName):
     "Plot the PSF Iteration"
     f, axes = out_plot.psf_iteration_compare(kwargs_psf_out, vmin=-6)
     f.savefig("%s/%s_Plot4_PSF_Iteration.pdf" % (Path, LensName))
-
 
     "Plot the data and its comonents"
     f, axes = plt.subplots(2, 3, figsize=(16, 8), sharex=False, sharey=False)

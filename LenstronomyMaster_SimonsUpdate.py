@@ -96,7 +96,7 @@ def getImage(file_path, exp_time, bkg_rms, bkg_mean, crop_factor, lens_org):
         , 'image_data': cropped_image - mean_bkg
     }
     data_class = Data(kwargs_data)
-    return data_class, deltaPix, kwargs_data, cropped_image
+    return data_class, deltaPix, kwargs_data, cropped_image, image
 
 def getPSF(data_class, deltaPix, kwargs_data, x_quasar, y_quasar, lens_cropped, kernel_size, Path, LensName, PSF_Choice, PSF_Int_Kernel, PSF_Rot):
     x_quasar = x_quasar
@@ -216,7 +216,7 @@ def setParameters(theta_e_est, ra_lens, dec_lens, ra_quasar, dec_quasar, lens_pa
 "Initialize Lenstronomy"
 def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasar, y_quasar, crop_factor, lens_org, lens_cropped, kernel_size, lens_params_dict, source_params_dict, lens_light_params_dict, ps_params_dict, n_iterations, n_particles, PSF_Choice, PSF_Int_Kernel, SourceVisible, PSF_Rot, *mask_path):
    "Importing the image file"
-   data_class, deltaPix, kwargs_data, cropped_image = getImage(file_path, exp_time, bkg_rms, bkg_mean, crop_factor, lens_org)
+   data_class, deltaPix, kwargs_data, cropped_image, image = getImage(file_path, exp_time, bkg_rms, bkg_mean, crop_factor, lens_org)
    Path = "/Users/edenmolina/PycharmProjects/Quasar/Lenstronomy"
 
    "Getting the PSF of a lensed Quasar"
@@ -254,24 +254,52 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
                            'mask': np.ones_like(cropped_image),
                            'psf_keep_error_map': True,
                            'point_source_subgrid': 1}
-        # plt.imshow(np.ones_like(cropped_image))
-        # plt.show()
+        plt.imshow(np.ones_like(cropped_image), origin = 'lower')
+        plt.show()
         multi_band_list = [[kwargs_data, kwargs_psf, kwargs_numerics]]
    else:
         print "Mask found"
-        hdulist = fits.open(str(mask_path[0]))
-        mask = hdulist[0].data
-        cropped_mask = getSquareCutout(lens_org, mask, int(crop_factor))
-        cropped_mask = 1-cropped_mask
-        #print cropped_mask
-        # plt.close()
-        # plt.imshow(cropped_mask)
-        # plt.show()
-        kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False,
-                           'mask': cropped_mask,
-                           'psf_keep_error_map': True,
-                           'point_source_subgrid': 1}
-        multi_band_list = [[kwargs_data, kwargs_psf, kwargs_numerics]]
+        if LensName == 'J1001':
+            print "This is 1101"
+            mask = np.zeros(np.shape(image))
+            mask[580:697,782:906] = 1
+            mask[1042:1180, 1047:1188] = 1
+            #mask[0:200, 0:200] = 1.
+            #print mask
+
+            plt.imshow(mask,  # use log10 as the scale than let's you compare change in magnitude
+                       origin='lower',
+                       vmin=-.9,
+                       vmax=2,
+                       cmap=sns.cubehelix_palette(start=0.5, rot=-1.5, gamma=1., hue=1.,
+                                                  # l/ight=.8,
+                                                  dark=0.,
+                                                  reverse=True, as_cmap=True))
+
+            #plt.show()
+            cropped_mask = getSquareCutout(lens_org, mask, int(crop_factor))
+            cropped_mask = 1 - cropped_mask
+
+            kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False,
+                               'mask': cropped_mask,
+                               'psf_keep_error_map': True,
+                               'point_source_subgrid': 1}
+            multi_band_list = [[kwargs_data, kwargs_psf, kwargs_numerics]]
+        else:
+            hdulist = fits.open(str(mask_path[0]))
+            mask = hdulist[0].data
+
+            cropped_mask = getSquareCutout(lens_org, mask, int(crop_factor))
+            cropped_mask = 1-cropped_mask
+            #print cropped_mask
+            # plt.close()
+            # plt.imshow(cropped_mask)
+            # plt.show()
+            kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False,
+                               'mask': cropped_mask,
+                               'psf_keep_error_map': True,
+                               'point_source_subgrid': 1}
+            multi_band_list = [[kwargs_data, kwargs_psf, kwargs_numerics]]
 
    num_source_model = len(source_model_list)
 
