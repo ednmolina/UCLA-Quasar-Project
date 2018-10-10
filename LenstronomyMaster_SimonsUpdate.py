@@ -255,7 +255,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
                            'psf_keep_error_map': True,
                            'point_source_subgrid': 1}
         plt.imshow(np.ones_like(cropped_image), origin = 'lower')
-        plt.show()
+        #plt.show()
         multi_band_list = [[kwargs_data, kwargs_psf, kwargs_numerics]]
    else:
         print "Mask found"
@@ -291,10 +291,10 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
 
             cropped_mask = getSquareCutout(lens_org, mask, int(crop_factor))
             cropped_mask = 1-cropped_mask
-            #print cropped_mask
+            print cropped_mask
             # plt.close()
-            # plt.imshow(cropped_mask)
-            # plt.show()
+            plt.imshow(cropped_mask, origin='lower')
+            #plt.show()
             kwargs_numerics = {'subgrid_res': 1, 'psf_subgrid': False,
                                'mask': cropped_mask,
                                'psf_keep_error_map': True,
@@ -347,7 +347,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    "First fitting sequence"
    fitting_seq = FittingSequence(multi_band_list, kwargs_model, kwargs_constraints, kwargs_likelihood, kwargs_params)
    #Change the PSF iteration number here
-   psf_iterations = 50
+   psf_iterations = 75
    fitting_kwargs_list = [
        {'fitting_routine': 'PSO', 'mpi': False, 'sigma_scale': 1., 'n_particles': n_particles,
         'n_iterations': n_iterations},
@@ -367,7 +367,7 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
    pickle.dump(param_list, open("%s/param_list_%s.pickle" % (pick_path, LensName), 'wb'))
 
    "Second Fitting Sequence"
-   lens_params = [lens_result, kwargs_lens_sigma, [{'gamma':2}, {}], kwargs_lower_lens, kwargs_upper_lens]
+   lens_params = [lens_result, kwargs_lens_sigma, [lens_params_dict, {}], kwargs_lower_lens, kwargs_upper_lens]
    source_params = [source_result, kwargs_source_sigma, [{}], kwargs_lower_source, kwargs_upper_source]
    lens_light_params = [lens_light_result, kwargs_lens_light_sigma, [{}], kwargs_lower_lens_light,
                         kwargs_upper_lens_light]
@@ -387,7 +387,6 @@ def lenstronomy_master(LensName, file_path, exp_time, bkg_rms, bkg_mean, x_quasa
        {'fitting_routine': 'psf_iteration', 'psf_iter_num': 50, 'psf_iter_factor': 0.1}
        # {'fitting_routine': 'MCMC', 'n_burn': 100, 'n_run': 100, 'walkerRatio': 10, 'mpi': False,'sigma_scale': .1}
    ]
-
 
    lens_result, source_result, lens_light_result, ps_result, cosmo_result, chain_list, param_list, samples_mcmc, param_mcmc, dist_mcmc = fitting_seq.fit_sequence(
        fitting_kwargs_list)
