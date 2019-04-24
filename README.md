@@ -14,6 +14,10 @@ In order to obtain the positions and flux of the quasar images and lensing galax
 
 When run, `grabCoordinates_v2.py`, will open a Finder window from which the user will select a `.fits` image file to load. Once the image is loaded a new window will appear from which the user will click on an object-either the center of a lensed quasar or a lensing galaxy. Once the window is closed the MCMC will begin to run and when complete the code will save a csv of its best estimate of the Gaussian parameters that closely describe that it sees in the original image as well as two plots: one showing the progression of the walkers of the MCMC and a triangle plot showing the covariance and marginal distributions of the parameters.
 
+# Main Routine
+The actual modeling will take place using the notebooks in the folder `Modeling Notebooks`. First run `LenstronomyMaster` which will run `lenstronomy` and will pickle the modeling results.
+`Lenstronomy_Plot_ReconstructionWithGravlens` will plot the observed image, the reconstruction, and the normalized residual. `Lenstronomy_Plot_MCMCResults` will plot the MCMC data from `LenstronomyMaster`. `Lenstronomy_Compute_PosteriorMagnitude` will calculate the posterior distribution of the magnitudes as given by the MCMC in the master notebook.
+
 # Requirements
 * `Python 2.7`
 * `CosmoHammer`
